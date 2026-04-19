@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExchangeHub | Live Exchange Rate API</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- CSS & Fonts -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body>
+<div class="app-wrapper">
+    <aside class="sidebar">
+        <div class="logo-area">
+            <span class="e-badge">E</span>
+            <span>XCHANGE<span class="hub">HUB</span></span>
+        </div>
+        <div class="menu-label">MENU UTAMA</div>
+        <nav>
+            <a href="#" class="nav-item"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+            <a href="#" class="nav-item active"><i class="fa-solid fa-right-left"></i> Converter</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-bolt"></i> Live Rates</a>
+            <a href="#" class="nav-item"><i class="fa-solid fa-chart-line"></i> Trends</a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="last-update" id="lastUpdateTime">Memuat data...</div>
+            <div class="api-status" id="apiStatus">🟢 API Connected</div>
+            <i class="fa-regular fa-bell bell-icon"></i>
+            <div class="profile-badge">
+                <span>Alex Graham</span>
+                <img src="https://ui-avatars.com/api/?name=Alex+Graham&background=2563eb&color=fff&size=36" alt="profile">
+            </div>
+        </div>
+        <div id="flagsContainer" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;"></div>
+
+        <!-- CONVERTER CARD -->
+        <div class="card">
+            <h2>Currency Converter</h2>
+            <div class="converter-grid">
+                <div class="field">
+                    <label>DARI</label>
+                    <select id="fromCurr"></select>
+                </div>
+                <div class="swap-icon" id="swapBtn">
+                    <i class="fa-solid fa-right-left"></i>
+                </div>
+                <div class="field">
+                    <label>KE</label>
+                    <select id="toCurr"></select>
+                </div>
+                <div class="field">
+                    <label>JUMLAH</label>
+                    <input type="text" id="amount" value="100" step="any">
+                </div>
+            </div>
+            <div class="result-area">
+                <div class="result-text">
+                    <h4>Hasil Konversi:</h4>
+                    <div class="value" id="conversionResult">—</div>
+                </div>
+                <button class="btn-convert" id="convertNowBtn">Konversi Sekarang</button>
+            </div>
+        </div>
+
+<!-- 7-Day Trend + Watchlist -->
+<div class="row-split">
+    <div class="trend-box">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+            <span>Historical Trend <span class="trend-sub" id="chartPairLabel">USD/IDR</span></span>
+            <div class="date-range-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+                <select id="presetRangeSelect" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0; background: white; font-size: 0.75rem; cursor: pointer;">
+                    <option value="7">7 Hari Terakhir</option>
+                    <option value="14">14 Hari Terakhir</option>
+                    <option value="30">30 Hari Terakhir</option>
+                    <option value="90">3 Bulan Terakhir</option>
+                    <option value="180">6 Bulan Terakhir</option>
+                    <option value="365">1 Tahun Terakhir</option>
+                    <option value="1825">5 Tahun Terakhir</option>
+                    <option value="3650">10 Tahun Terakhir</option>
+                    <option value="7300">20 Tahun Terakhir</option>
+                    <option value="custom">Custom Range</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- Custom Date Range Panel (hidden by default) -->
+        <div id="customDatePanel" style="display: none; margin-bottom: 15px; padding: 12px; background: #f8fafc; border-radius: 16px; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <div>
+                    <label style="display: block; font-size: 0.7rem; color: #5b6e8c; margin-bottom: 4px;">Dari Tanggal</label>
+                    <input type="date" id="startDate" style="padding: 8px 12px; border-radius: 12px; border: 1px solid #cfdee9; font-size: 0.85rem;">
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.7rem; color: #5b6e8c; margin-bottom: 4px;">Sampai Tanggal</label>
+                    <input type="date" id="endDate" style="padding: 8px 12px; border-radius: 12px; border: 1px solid #cfdee9; font-size: 0.85rem;">
+                </div>
+                <button id="applyCustomRange" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 30px; font-size: 0.75rem; font-weight: 500; cursor: pointer;">Terapkan</button>
+            </div>
+            <div style="font-size: 0.7rem; color: #64748b; margin-top: 8px;">
+                📅 Data tersedia dari Januari 1999 hingga hari ini
+            </div>
+        </div>
+        
+        <canvas id="trendChartCanvas" width="500" height="200" style="max-height: 200px; width: 100%;"></canvas>
+        <div id="chartInfo" style="margin-top: 12px; padding-top: 8px; border-top: 1px solid #eef2ff; font-size: 0.75rem; color: #5b6e8c; text-align: center;"></div>
+    </div> <!-- Penutup trend-box -->
+
+    <div class="watchlist-box">
+        <div class="section-title">
+            <span>Watchlist <i class="fa-regular fa-star"></i></span> 
+            <button id="addToWatchlistBtn"> 
+                <i class="fa-solid fa-plus"></i> Tambah
+            </button>
+        </div>
+        <div id="watchlistDynamic">
+             <!-- Watchlist items akan diisi oleh JavaScript -->
+            <div class="watchlist-empty">📭 Belum ada mata uang di Watchlist <br>Klik "Tambah" untuk menambahkan</div>
+        </div>
+    </div> <!-- Penutup watchlist-box -->
+</div> <!-- Penutup row-split -->
+
+<!-- Modal untuk menambah watchlist (hidden by default) -->
+<div id="watchlistModal">
+    <div style="background: white; border-radius: 24px; padding: 24px; width: 360px; max-width: 90%; box-shadow: 0 20px 35px -10px rgba(0,0,0,0.2);">
+        
+        <!-- Header Modal -->
+        <div class="header-modal">
+            <i class="fa-regular fa-star" style="font-size: 1.5rem; color: #2563eb;"></i>
+            <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600;">Tambah ke Watchlist</h3>
+        </div>
+        
+        <!-- Keterangan Untuk User -->
+        <div class="Keterangan-user">
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <i class="fa-regular fa-lightbulb" style="color: #f59e0b; font-size: 1rem;"></i>
+                <div style="font-size: 0.75rem; color: #475569; line-height: 1.5;">
+                    <strong style="color: #1e293b;">💡 Tips:</strong> Pilih pasangan mata uang yang ingin kamu pantau.
+                    Contoh: <strong>USD/IDR</strong> (Dollar ke Rupiah) atau <strong>EUR/USD</strong> (Euro ke Dollar).
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pilih Mata Uang Tujuan (To) -->
+        <div style="margin-bottom: 16px;">
+            <label class="MataUangTujuan">
+                <i class="fa-regular fa-flag"></i> Mata Uang Tujuan (To)
+            </label>
+            <div style="position: relative;">
+                <select id="watchlistCurrencySelect" style="width: 100%; padding: 12px 12px 12px 40px; border-radius: 12px; border: 1px solid #cfdee9; font-size: 0.9rem;">
+                    <option value="">Memuat data...</option>
+                </select>
+                <div id="currencyFlagPreview" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 24px; height: 18px; background-size: contain; background-repeat: no-repeat; background-position: center;"></div>
+            </div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">
+                Mata uang yang ingin kamu lihat nilainya (contoh: IDR, JPY, EUR)
+            </div>
+        </div>
+        
+        <!-- Pilih Mata Uang Dasar (From) -->
+        <div style="margin-bottom: 20px;">
+            <label class="MataUangDasar"style="">
+                <i class="fa-solid fa-chart-line"></i> Mata Uang Dasar (From)
+            </label>
+            <div style="position: relative;">
+                <select id="watchlistBaseSelect" style="width: 100%; padding: 12px 12px 12px 40px; border-radius: 12px; border: 1px solid #cfdee9; font-size: 0.9rem;">
+                    <option value="USD">USD - US Dollar</option>
+                    <option value="EUR">EUR - Euro</option>
+                    <option value="GBP">GBP - British Pound</option>
+                    <option value="IDR">IDR - Indonesian Rupiah</option>
+                    <option value="JPY">JPY - Japanese Yen</option>
+                    <option value="SGD">SGD - Singapore Dollar</option>
+                    <option value="AUD">AUD - Australian Dollar</option>
+                    <option value="CAD">CAD - Canadian Dollar</option>
+                    <option value="CHF">CHF - Swiss Franc</option>
+                    <option value="CNY">CNY - Chinese Yuan</option>
+                </select>
+                <div id="baseFlagPreview"></div>
+            </div>
+            <div style="font-size: 0.65rem; color: #94a3b8; margin-top: 4px;">
+                Mata uang acuan yang akan dibandingkan (contoh: 1 USD = ? IDR)
+            </div>
+        </div>
+        
+        <!-- Preview Pasangan -->
+        <div class="Preview-Pasangan">
+            <span style="font-size: 0.7rem; color: #5b6e8c;">Pasangan yang akan ditambahkan:</span>
+            <div style="font-size: 1.1rem; font-weight: 700; color: #2563eb; margin-top: 4px;">
+                <span id="previewFromCurrency">USD</span> / <span id="previewToCurrency">IDR</span>
+            </div>
+            <div style="font-size: 0.65rem; color: #64748b; margin-top: 4px;">
+                Akan muncul di watchlist dengan rate terkini
+            </div>
+        </div>
+        
+        <!-- Tombol Aksi -->
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="closeModalBtn" style="padding: 10px 20px; background: #f1f5f9; border: none; border-radius: 30px; cursor: pointer; font-size: 0.8rem;">
+                <i class="fa-solid fa-xmark"></i> Batal
+            </button>
+            <button id="confirmAddWatchlistBtn">
+                <i class="fa-regular fa-plus"></i> Tambah ke Watchlist
+            </button>
+        </div>
+    </div> <!-- Penutup div modal content -->
+</div> <!-- Penutup watchlistModal -->
+
+<!-- Exchange Table -->
+<!-- Exchange Table dengan fitur tambahan -->
+<div class="table-wrapper">
+    <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <span>Exchange Table <i class="fa-solid fa-chart-line"></i></span>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <!-- 🆕 Base Currency Selector (dinamis) -->
+            <div style="position: relative;">
+                <select id="baseCurrencySelect" style="padding: 8px 12px 8px 32px; border-radius: 30px; border: 1px solid #cfdee9; font-size: 0.75rem; background: white; cursor: pointer; min-width: 120px;">
+                    <option value="IDR">💰 Memuat data...</option>
+                </select>
+                <div id="baseFlagPreview" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 20px; height: 14px; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none;"></div>
+            </div>
+            
+            <!-- 🆕 Periode Perubahan -->
+            <div style="position: relative;">
+                <select id="changePeriodSelect" style="padding: 8px 12px; border-radius: 30px; border: 1px solid #cfdee9; font-size: 0.75rem; background: white; cursor: pointer;">
+                    <option value="24h">🕐 24 Jam</option>
+                    <option value="7d">📅 7 Hari</option>
+                    <option value="30d">📆 30 Hari</option>
+                    <option value="custom">📅 Custom Range</option>
+                </select>
+            </div>
+            
+            <!-- Custom Date Panel (hidden by default) -->
+            <div id="customChangeDatePanel" style="display: none; gap: 8px; align-items: center;">
+                <input type="date" id="changeStartDate" style="padding: 6px 10px; border-radius: 20px; border: 1px solid #cfdee9; font-size: 0.7rem;">
+                <button id="applyChangeDateBtn" style="padding: 6px 12px; background: #2563eb; color: white; border: none; border-radius: 20px; font-size: 0.7rem; cursor: pointer;">Terapkan</button>
+            </div>
+
+
+
+            <!-- Filter Tampilan -->
+            <select id="tableFilterSelect" style="padding: 8px 12px; border-radius: 30px; border: 1px solid #cfdee9; font-size: 0.75rem; background: white;">
+                <option value="all">📊 Semua Mata Uang</option>
+                <option value="favorites">⭐ Favorit Saja</option>
+            </select>
+            <!-- Search Input -->
+            <div style="position: relative;">
+                <i class="fa-solid fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #94a3b8;"></i>
+                <input type="text" id="searchCurrency" placeholder="Cari mata uang..." 
+                    style="padding: 8px 12px 8px 32px; border-radius: 30px; border: 1px solid #cfdee9; font-size: 0.8rem; width: 160px;">
+            </div>
+            <!-- Refresh Button -->
+            <button id="refreshTableBtn" style="background: #f1f5f9; border: none; border-radius: 30px; padding: 8px 12px; cursor: pointer;">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <div id="tableContainer">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="cursor: pointer;" data-sort="currency">Mata Uang <i class="fa-solid fa-arrow-down-wide-short sort-icon"></i></th>
+                    <th style="cursor: pointer;" data-sort="rate">Rate (IDR) <i class="fa-solid fa-arrow-down-wide-short sort-icon"></i></th>
+                    <th style="cursor: pointer;" data-sort="change">Perubahan (24h) <i class="fa-solid fa-arrow-down-wide-short sort-icon"></i></th>
+                    <th style="width: 40px;">⭐</th>
+                </tr>
+            </thead>
+            <tbody id="exchangeTableBody">
+                <tr><td colspan="4" class="loading">Memuat data dari API...</td></tr>
+            </tbody>
+        </table>
+        
+        <!-- Pagination -->
+        <div id="tablePagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #edf2f7;">
+            <div style="font-size: 0.7rem; color: #64748b;">
+                Menampilkan <span id="pageStart">0</span> - <span id="pageEnd">0</span> dari <span id="totalItems">0</span> mata uang
+            </div>
+            <div style="display: flex; gap: 6px;">
+                <button id="prevPageBtn" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #cfdee9; background: white; cursor: pointer; font-size: 0.7rem;">◀ Sebelumnya</button>
+                <span id="pageInfo" style="padding: 6px 12px; font-size: 0.7rem; color: #475569;">Halaman 1</span>
+                <button id="nextPageBtn" style="padding: 6px 12px; border-radius: 20px; border: 1px solid #cfdee9; background: white; cursor: pointer; font-size: 0.7rem;">Selanjutnya ▶</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="index.js"></script>
+</body>
+</html>
